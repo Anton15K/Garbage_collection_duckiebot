@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>tof_reader</name>
+  <version>1.0.0</version>
+  <description>Move Duckiebot forward until it detects an object within 0.2 meters</description>
+  <maintainer email="lankford@mit.edu">Gage Lankford</maintainer>
+  <maintainer email="ilia.nechaev@jetbrains.com">Ilia Nechaev</maintainer>
+  <license>GPLv3</license>
+  
+  <!-- Add other dependencies-->
+  <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>rclpy</depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
