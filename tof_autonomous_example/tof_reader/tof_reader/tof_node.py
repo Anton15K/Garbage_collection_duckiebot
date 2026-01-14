@@ -12,19 +12,30 @@ class TofNode(Node):
     def __init__(self):
         super().__init__('tof')
         self.vehicle_name = os.getenv('VEHICLE_NAME')
-
+        self.movingback = False
         self.tof_sub = self.create_subscription(Range, f'/{self.vehicle_name}/range', self.check_range, 10)
         self.wheels_pub = self.create_publisher(WheelsCmdStamped, f'/{self.vehicle_name}/wheels_cmd', 10)
+        self.counter = 0
+        self.timer = self.create_timer(1, self.check_range)
 
     def check_range(self, msg):
         distance = msg.range
-        if distance >= 0.2:
+        if distance >= 0.2 and not self.movingback:
             self.move_forward()
+        elif self.movingback and self.counter <= 5:
+            self.move_backward()
         else:
             self.stop()
+            self.movingback = True
+
 
     def move_forward(self):
         self.run_wheels('forward_callback', 0.5, 0.5)
+
+    def move_backward(self):
+
+        self.run_wheels('backward_callback', -0.5, -0.5)
+        self.counter += 1
 
     def stop(self):
         self.run_wheels('stop_callback', 0.0, 0.0)
