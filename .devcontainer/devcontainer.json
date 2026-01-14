@@ -1,0 +1,31 @@
+{
+  "name": "ROS 2 Humble (Garbage_collection_duckiebot)",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "remoteUser": "vscode",
+  "postCreateCommand": "bash .devcontainer/postCreateCommand.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.ruff",
+        "ms-iot.vscode-ros",
+        "ms-vscode.cpptools"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "python.defaultInterpreterPath": "/usr/bin/python3",
+        "python.envFile": "${containerWorkspaceFolder}/.devcontainer/.env",
+        "python.analysis.extraPaths": [
+          "${containerWorkspaceFolder}/src/blank_package",
+          "${containerWorkspaceFolder}/tof_autonomous_example/tof_reader",
+          "${containerWorkspaceFolder}/.ros_python"
+        ],
+        "ruff.enable": true
+      }
+    }
+  }
+}
