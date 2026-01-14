@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+
+# Configuration
+LIMA_INSTANCE="ros2-bridged"
+CONTAINER_NAME="ros2-humble"
+DOCKER_CONTEXT="bridged-docker"
+SETUP_SCRIPT="/Users/ivan.voevodskiy/Downloads/config/docker_cont.sh"
+
+# Ensure the Lima instance directory exists
+LIMA_DIR="$HOME/.lima/$LIMA_INSTANCE"
+if [ ! -d "$LIMA_DIR" ]; then
+    echo "Error: Lima instance $LIMA_INSTANCE not found at $LIMA_DIR"
+    exit 1
+fi
+
+DOCKER_SOCK="$LIMA_DIR/sock/docker.sock"
+
+# Function to check if VM is running
+is_vm_running() {
+    limactl list "$LIMA_INSTANCE" --format '{{.Status}}' | grep -q "Running"
+}
+
+# Function to check if socket_vmnet is running
+is_net_running() {
+    pgrep -f socket_vmnet > /dev/null
+}
+
+# Ensure everything is up
+ensure_service() {
+    if ! is_vm_running || ! is_net_running; then
+        echo "Starting bridged-docker service (VM and networking)..."
+        # Run from the script's directory to ensure dependencies are found
+        (cd "$(dirname "$SETUP_SCRIPT")" && ./$(basename "$SETUP_SCRIPT"))
+    fi
+}
+
+# Setup docker context if it doesn't exist
+setup_context() {
+    if ! docker context inspect "$DOCKER_CONTEXT" > /dev/null 2>&1; then
+        echo "Creating docker context: $DOCKER_CONTEXT"
+        docker context create "$DOCKER_CONTEXT" --docker "host=unix://$DOCKER_SOCK" --description "Docker inside $LIMA_INSTANCE VM"
+    fi
+}
+
+# Main
+setup_context
+
+case "$1" in
+    start)
+        ensure_service
+        ;;
+    stop)
+        echo "Stopping bridged-docker service..."
+        limactl stop "$LIMA_INSTANCE"
+        sudo pkill -f socket_vmnet
+        ;;
+    status)
+        if is_vm_running; then echo "VM: Running"; else echo "VM: Stopped"; fi
+        if is_net_running; then echo "Net: Running"; else echo "Net: Stopped"; fi
+        ;;
+    shell)
+        ensure_service
+        docker --context "$DOCKER_CONTEXT" exec -it "$CONTAINER_NAME" bash -lc "source /opt/ros/humble/setup.bash && exec bash"
+        ;;
+    *)
+        ensure_service
+        if [ $# -eq 0 ]; then
+            # Default to shell if no args
+            docker --context "$DOCKER_CONTEXT" exec -it "$CONTAINER_NAME" bash -lc "source /opt/ros/humble/setup.bash && exec bash"
+        else
+            # Execute command inside the container
+            # If the user wants to run normal docker commands on the host, they can use --context bridged-docker
+            # But if they use 'bridged-docker ps', we should probably run 'docker --context bridged-docker ps'
+            
+            # Check if the first arg is a docker command or if it's meant for inside the container
+            # The user said "use normal docker command to execute it directly inside the container"
+            # This is slightly contradictory. Do they mean:
+            # A) bridged-docker run ... (runs on VM)
+            # B) bridged-docker ros2 topic list (runs inside ros2-humble container)
+            
+            # Usually, if they name it 'bridged-docker', they might expect it to behave like 'docker' but for this VM.
+            # But the "inside the container" part strongly suggests 'docker exec'.
+            
+            # Let's support both or pick one. 
+            # If I use 'docker --context bridged-docker "$@"', then they can do:
+            # bridged-docker ps
+            # bridged-docker exec -it ros2-humble ros2 topic list
+            
+            # If I want it to be "direct", I can do:
+            docker --context "$DOCKER_CONTEXT" exec -it "$CONTAINER_NAME" bash -lc "source /opt/ros/humble/setup.bash && $*"
+        fi
+        ;;
+esac
