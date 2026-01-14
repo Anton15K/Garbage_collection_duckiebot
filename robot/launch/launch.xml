@@ -1,0 +1,10 @@
+<launch>
+
+    <arg name="veh" description="Name of vehicle. ex: megaman" default="$(env VEHICLE_NAME)"/>
+    <arg name="user" description="Name of user of the node" default="$(env USER_NAME)"/>
+    <node pkg="robot" exec="main.py" name="robot_$(var user)" output="screen" >
+<!--        emulate_tty="true" launch-prefix="bash -c 'exec < /dev/tty && exec $0 $@'"-->
+        <param name="vehicle_name" value="$(var veh)"/>
+    </node>
+
+</launch>
